@@ -75,6 +75,16 @@ Responda focando na quantidade disponível, em português brasileiro."""
         intent = intent_data.get("intent", "search_product")
         product_name = intent_data.get("product")
         
+        # Handle special case: check total products
+        if intent == "check_total_products":
+            try:
+                all_products = self.inventory_service.get_all_products()
+                total = len(all_products)
+                return f"Temos {total} produtos diferentes no nosso estoque."
+            except Exception as e:
+                logger.error(f"Error getting total products: {e}")
+                return "Desculpe, não consegui verificar a quantidade total de produtos no momento."
+        
         # Search for product
         product = self._search_product(product_name)
         

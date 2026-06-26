@@ -53,6 +53,13 @@ const Chat = () => {
     }
   };
 
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSubmit(e);
+    }
+  };
+
   return (
     <div className="chat-container">
       <div className="chat-header">
@@ -81,7 +88,8 @@ const Chat = () => {
           type="text"
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          placeholder="Digite sua mensagem..."
+          onKeyDown={handleKeyDown}
+          placeholder="Digite sua mensagem... (Enter para enviar, Shift+Enter para nova linha)"
           disabled={isLoading}
         />
         <button type="submit" disabled={isLoading || !input.trim()}>

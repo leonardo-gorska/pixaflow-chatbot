@@ -79,15 +79,18 @@ Responda em português brasileiro, de forma breve e natural."""
 Responda APENAS em formato JSON válido com as chaves "intent" e "product".
 
 Intenções possíveis:
-- "search_product": usuário está procurando um produto
-- "check_quantity": usuário quer saber a quantidade
-- "check_price": usuário quer saber o preço
+- "search_product": usuário está procurando um produto específico
+- "check_quantity": usuário quer saber a quantidade de um produto específico
+- "check_price": usuário quer saber o preço de um produto específico
+- "check_total_products": usuário quer saber quantos produtos existem no estoque no total
 - "general": pergunta geral sobre o produto
 
 Mensagem do usuário: "{message}"
 
-Exemplo de resposta:
+Exemplos de resposta:
 {{"intent": "search_product", "product": "arroz"}}
+{{"intent": "check_quantity", "product": "arroz"}}
+{{"intent": "check_total_products", "product": null}}
 
 Se não conseguir identificar um produto específico, retorne null para "product"."""
         
