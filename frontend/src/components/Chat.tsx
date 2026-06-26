@@ -51,15 +51,17 @@ const Chat = () => {
       setMessages((prev) => [...prev, errorMessage]);
     } finally {
       setIsLoading(false);
-      // Focus back on input after sending
-      if (inputRef.current) {
-        inputRef.current.focus();
-      }
+      // Focus back on input after sending with small delay
+      setTimeout(() => {
+        if (inputRef.current) {
+          inputRef.current.focus();
+        }
+      }, 100);
     }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
+    if (e.key === 'Enter' && !e.altKey) {
       e.preventDefault();
       handleSubmit(e);
     }
@@ -95,7 +97,7 @@ const Chat = () => {
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder="Digite sua mensagem... (Enter para enviar, Shift+Enter para nova linha)"
+          placeholder="Digite sua mensagem... (Enter para enviar, Alt+Enter para nova linha)"
           disabled={isLoading}
         />
         <button type="submit" disabled={isLoading || !input.trim()}>
