@@ -2,6 +2,10 @@ import google.generativeai as genai
 from app.config import get_settings
 from typing import Optional
 import json
+import logging
+import re
+
+logger = logging.getLogger(__name__)
 
 
 class GeminiService:
@@ -18,7 +22,7 @@ class GeminiService:
             response = self.model.generate_content(prompt)
             return response.text
         except Exception as e:
-            print(f"Error generating response: {e}")
+            logger.error(f"Error generating response: {e}")
             raise  # Re-raise to allow fallback handling
     
     def format_product_response(self, product_data: dict, user_query: str) -> str:
@@ -50,6 +54,21 @@ Responda de forma educada e sugira que o usuário pergunte sobre outros produtos
 Responda em português brasileiro, de forma breve e natural."""
         
         return self.generate_response(prompt)
+    
+    def _clean_product_name(self, text: str) -> str:
+        """
+        Clean product name by removing punctuation and common words.
+        """
+        # Remove punctuation
+        text = re.sub(r'[^\w\s]', '', text)
+        # Common words to remove
+        common_words = {'tem', 'temos', 'quanto', 'quanta', 'quantos', 'quantas', 
+                       'custa', 'custam', 'existe', 'existem', 'temos', 'o', 'a', 
+                       'os', 'as', 'um', 'uma', 'uns', 'umas', 'de', 'da', 'do', 
+                       'em', 'para', 'por', 'é', 'são', 'está', 'estão'}
+        words = text.lower().split()
+        filtered_words = [w for w in words if w not in common_words and len(w) > 2]
+        return ' '.join(filtered_words)
     
     def extract_intent_and_product(self, message: str) -> dict:
         """
@@ -83,9 +102,10 @@ Se não conseguir identificar um produto específico, retorne null para "product
             result = json.loads(response_text)
             return result
         except Exception as e:
-            print(f"Error extracting intent: {e}")
-            # Fallback: return the original message as product
-            return {"intent": "search_product", "product": message.lower()}
+            logger.error(f"Error extracting intent: {e}")
+            # Fallback: clean the message and use as product
+            cleaned_product = self._clean_product_name(message)
+            return {"intent": "search_product", "product": cleaned_product}
     
     def format_response_with_fallback(self, product_data: dict, user_query: str) -> str:
         """
