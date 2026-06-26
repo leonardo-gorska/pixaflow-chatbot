@@ -1,5 +1,6 @@
 from pydantic_settings import BaseSettings
 from functools import lru_cache
+from pathlib import Path
 
 
 class Settings(BaseSettings):
@@ -7,7 +8,7 @@ class Settings(BaseSettings):
     database_url: str = "sqlite:///./inventory.db"
 
     class Config:
-        env_file = ".env"
+        env_file = Path(__file__).parent.parent.parent / ".env"
         case_sensitive = False
 
 
