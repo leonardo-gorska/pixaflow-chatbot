@@ -1,66 +1,5 @@
 import pytest
-from fastapi.testclient import TestClient
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
 from unittest.mock import Mock, patch
-from app.database.models import Base, Product
-from app.database.database import get_db
-from app.main import app
-
-
-# Setup test database
-TEST_DATABASE_URL = "sqlite:///./test_chat.db"
-engine = create_engine(TEST_DATABASE_URL, connect_args={"check_same_thread": False})
-TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-
-
-@pytest.fixture
-def db_session():
-    """Create a fresh database session for each test."""
-    Base.metadata.create_all(bind=engine)
-    session = TestingSessionLocal()
-    
-    # Add test data
-    test_products = [
-        Product(
-            name="Arroz Camil 5kg",
-            description="Arroz integral premium",
-            price=29.90,
-            quantity=18,
-            category="Grãos"
-        ),
-        Product(
-            name="Feijão Carioca Kicaldo 1kg",
-            description="Feijão carioca tradicional",
-            price=8.90,
-            quantity=40,
-            category="Grãos"
-        ),
-    ]
-    session.add_all(test_products)
-    session.commit()
-    
-    yield session
-    
-    session.close()
-    Base.metadata.drop_all(bind=engine)
-
-
-@pytest.fixture
-def client(db_session):
-    """Create a test client with overridden database dependency."""
-    def override_get_db():
-        try:
-            yield db_session
-        finally:
-            pass
-    
-    app.dependency_overrides[get_db] = override_get_db
-    
-    with TestClient(app) as test_client:
-        yield test_client
-    
-    app.dependency_overrides.clear()
 
 
 @patch('app.services.chat_service.GeminiService')
@@ -227,3 +166,24 @@ def test_get_product_by_id_not_found(client):
     response = client.get("/api/products/999")
     
     assert response.status_code == 404
+
+
+@patch('app.services.chat_service.GeminiService')
+def test_fallback_on_gemini_failure(mock_gemini, client):
+    """Test that fallback works when Gemini fails during intent extraction."""
+    mock_gemini_instance = Mock()
+    # Simulate Gemini failure during intent extraction
+    mock_gemini_instance.extract_intent_and_product.side_effect = Exception("Gemini API error")
+    mock_gemini_instance.format_no_product_response.return_value = "Desculpe, não encontrei esse produto no nosso estoque."
+    mock_gemini.return_value = mock_gemini_instance
+    
+    response = client.post(
+        "/api/chat",
+        json={"message": "Tem arroz?"}
+    )
+    
+    # Should still return 200 with fallback response
+    assert response.status_code == 200
+    data = response.json()
+    assert "answer" in data
+    assert data["answer"] is not None
