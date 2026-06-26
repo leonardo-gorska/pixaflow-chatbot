@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { chatAPI } from '../api';
 import './Chat.css';
 
@@ -18,6 +18,7 @@ const Chat = () => {
   ]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -50,6 +51,10 @@ const Chat = () => {
       setMessages((prev) => [...prev, errorMessage]);
     } finally {
       setIsLoading(false);
+      // Focus back on input after sending
+      if (inputRef.current) {
+        inputRef.current.focus();
+      }
     }
   };
 
@@ -85,6 +90,7 @@ const Chat = () => {
 
       <form className="chat-input" onSubmit={handleSubmit}>
         <input
+          ref={inputRef}
           type="text"
           value={input}
           onChange={(e) => setInput(e.target.value)}
