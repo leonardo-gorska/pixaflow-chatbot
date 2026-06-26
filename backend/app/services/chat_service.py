@@ -75,6 +75,10 @@ Responda focando na quantidade disponível, em português brasileiro."""
         intent = intent_data.get("intent", "search_product")
         product_name = intent_data.get("product")
         
+        # Handle greeting
+        if intent == "greeting":
+            return "Olá! Como posso ajudar você hoje? Pergunte sobre nossos produtos, preços ou quantidades em estoque."
+        
         # Handle special case: check total products
         if intent == "check_total_products":
             try:
