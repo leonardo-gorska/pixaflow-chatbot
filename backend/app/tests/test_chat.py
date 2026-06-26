@@ -2,6 +2,7 @@ import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
+from unittest.mock import Mock, patch
 from app.database.models import Base, Product
 from app.database.database import get_db
 from app.main import app
@@ -62,8 +63,18 @@ def client(db_session):
     app.dependency_overrides.clear()
 
 
-def test_chat_endpoint_success(client):
-    """Test the chat endpoint with a valid message."""
+@patch('app.services.chat_service.GeminiService')
+def test_chat_endpoint_success(mock_gemini, client):
+    """Test the chat endpoint with a valid message using mocked Gemini."""
+    # Mock the intent extraction
+    mock_gemini_instance = Mock()
+    mock_gemini_instance.extract_intent_and_product.return_value = {
+        "intent": "search_product",
+        "product": "arroz"
+    }
+    mock_gemini_instance.format_response_with_fallback.return_value = "Sim! Temos Arroz Camil 5kg. Preço: R$29.90. Quantidade: 18 unidades."
+    mock_gemini.return_value = mock_gemini_instance
+    
     response = client.post(
         "/api/chat",
         json={"message": "Tem arroz?"}
@@ -76,8 +87,17 @@ def test_chat_endpoint_success(client):
     assert len(data["answer"]) > 0
 
 
-def test_chat_endpoint_empty_message(client):
-    """Test the chat endpoint with an empty message."""
+@patch('app.services.chat_service.GeminiService')
+def test_chat_endpoint_empty_message(mock_gemini, client):
+    """Test the chat endpoint with an empty message using mocked Gemini."""
+    mock_gemini_instance = Mock()
+    mock_gemini_instance.extract_intent_and_product.return_value = {
+        "intent": "general",
+        "product": None
+    }
+    mock_gemini_instance.format_no_product_response.return_value = "Como posso ajudar você hoje?"
+    mock_gemini.return_value = mock_gemini_instance
+    
     response = client.post(
         "/api/chat",
         json={"message": ""}
@@ -89,8 +109,17 @@ def test_chat_endpoint_empty_message(client):
     assert "answer" in data
 
 
-def test_chat_endpoint_nonexistent_product(client):
-    """Test the chat endpoint asking about a non-existent product."""
+@patch('app.services.chat_service.GeminiService')
+def test_chat_endpoint_nonexistent_product(mock_gemini, client):
+    """Test the chat endpoint asking about a non-existent product using mocked Gemini."""
+    mock_gemini_instance = Mock()
+    mock_gemini_instance.extract_intent_and_product.return_value = {
+        "intent": "search_product",
+        "product": "chocolate"
+    }
+    mock_gemini_instance.format_no_product_response.return_value = "Desculpe, não encontrei esse produto no nosso estoque."
+    mock_gemini.return_value = mock_gemini_instance
+    
     response = client.post(
         "/api/chat",
         json={"message": "Tem chocolate?"}
@@ -104,8 +133,17 @@ def test_chat_endpoint_nonexistent_product(client):
     assert "não" in data["answer"].lower() or "desculpe" in data["answer"].lower()
 
 
-def test_chat_endpoint_quantity_query(client):
-    """Test the chat endpoint asking about quantity."""
+@patch('app.services.chat_service.GeminiService')
+def test_chat_endpoint_quantity_query(mock_gemini, client):
+    """Test the chat endpoint asking about quantity using mocked Gemini."""
+    mock_gemini_instance = Mock()
+    mock_gemini_instance.extract_intent_and_product.return_value = {
+        "intent": "check_quantity",
+        "product": "arroz"
+    }
+    mock_gemini_instance.format_response_with_fallback.return_value = "Temos 18 unidades de Arroz Camil 5kg em estoque."
+    mock_gemini.return_value = mock_gemini_instance
+    
     response = client.post(
         "/api/chat",
         json={"message": "Quantos arroz tem?"}
@@ -117,8 +155,17 @@ def test_chat_endpoint_quantity_query(client):
     assert data["answer"] is not None
 
 
-def test_chat_endpoint_price_query(client):
-    """Test the chat endpoint asking about price."""
+@patch('app.services.chat_service.GeminiService')
+def test_chat_endpoint_price_query(mock_gemini, client):
+    """Test the chat endpoint asking about price using mocked Gemini."""
+    mock_gemini_instance = Mock()
+    mock_gemini_instance.extract_intent_and_product.return_value = {
+        "intent": "check_price",
+        "product": "feijão"
+    }
+    mock_gemini_instance.format_response_with_fallback.return_value = "O Feijão Carioca Kicaldo 1kg custa R$8.90."
+    mock_gemini.return_value = mock_gemini_instance
+    
     response = client.post(
         "/api/chat",
         json={"message": "Quanto custa o feijão?"}
