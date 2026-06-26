@@ -6,6 +6,9 @@ from app.database.database import init_db
 from app.database.seed import seed_database
 from app.services.gemini_service import GeminiService
 from sqlalchemy import text
+import logging
+
+logger = logging.getLogger(__name__)
 
 # Initialize FastAPI app
 app = FastAPI(
@@ -68,7 +71,7 @@ async def health_check():
             conn.execute(text("SELECT 1"))
         health_status["database"] = True
     except Exception as e:
-        print(f"Database health check failed: {e}")
+        logger.error(f"Database health check failed: {e}")
     
     # Check Gemini API
     try:
@@ -77,11 +80,12 @@ async def health_check():
         test_response = gemini_service.model.generate_content("Test")
         health_status["gemini"] = True
     except Exception as e:
-        print(f"Gemini health check failed: {e}")
+        logger.error(f"Gemini health check failed: {e}")
     
-    overall_status = "healthy" if all(health_status.values()) else "degraded"
+    overall_status = "ok" if all(health_status.values()) else "degraded"
     
     return {
         "status": overall_status,
+        "version": "1.0.0",
         "components": health_status
     }
