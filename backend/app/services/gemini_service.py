@@ -79,9 +79,9 @@ Responda em português brasileiro, de forma breve e natural."""
 Responda APENAS em formato JSON válido com as chaves "intent" e "product".
 
 Intenções possíveis:
-- "greeting": usuário está cumprimentando (olá, oi, bom dia, etc)
-- "farewell": usuário está se despedindo (tchau, adeus, até logo, etc)
-- "thanks": usuário está agradecendo (obrigado, valeu, thanks, etc)
+- "greeting": usuário está cumprimentando (olá, oi, ola, bom dia, boa tarde, boa noite, etc)
+- "farewell": usuário está se despedindo (tchau, adeus, até logo, bye, etc)
+- "thanks": usuário está agradecendo (obrigado, valeu, thanks, obrigada, etc)
 - "search_product": usuário está procurando um produto específico
 - "check_quantity": usuário quer saber a quantidade de um produto específico
 - "check_price": usuário quer saber o preço de um produto específico
@@ -89,6 +89,11 @@ Intenções possíveis:
 - "general": pergunta geral sobre o produto
 
 Mensagem do usuário: "{message}"
+
+REGRAS IMPORTANTES:
+1. Se a mensagem for apenas uma saudação como "ola", "oi", "olá", retorne intent "greeting" e product null
+2. Se a mensagem perguntar sobre quantidade de um produto específico como "quantos cafés", retorne intent "check_quantity" e product "café"
+3. Se a mensagem perguntar sobre total de produtos como "quantos produtos", retorne intent "check_total_products" e product null
 
 Exemplos de resposta:
 {{"intent": "greeting", "product": null}}

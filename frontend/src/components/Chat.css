@@ -84,21 +84,23 @@
   border-top: 1px solid #e0e0e0;
 }
 
-.chat-input input {
+.chat-input textarea {
   flex: 1;
   padding: 14px 16px;
   border: 2px solid #e0e0e0;
   border-radius: 8px;
   font-size: 14px;
   transition: border-color 0.2s;
+  resize: none;
+  font-family: inherit;
 }
 
-.chat-input input:focus {
+.chat-input textarea:focus {
   outline: none;
   border-color: #667eea;
 }
 
-.chat-input input:disabled {
+.chat-input textarea:disabled {
   background: #f5f5f5;
   cursor: not-allowed;
 }

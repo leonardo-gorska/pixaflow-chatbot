@@ -18,7 +18,7 @@ const Chat = () => {
   ]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -91,14 +91,14 @@ const Chat = () => {
       </div>
 
       <form className="chat-input" onSubmit={handleSubmit}>
-        <input
+        <textarea
           ref={inputRef}
-          type="text"
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={handleKeyDown}
           placeholder="Digite sua mensagem... (Enter para enviar, Alt+Enter para nova linha)"
           disabled={isLoading}
+          rows={1}
         />
         <button type="submit" disabled={isLoading || !input.trim()}>
           {isLoading ? '...' : 'Enviar'}
