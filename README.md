@@ -7,6 +7,23 @@ Um chatbot de mercado simples e funcional desenvolvido como teste técnico. O pr
 O projeto segue uma arquitetura em camadas para separação de responsabilidades:
 
 ```
+Frontend (React + TypeScript)
+         ↓
+    API REST (FastAPI)
+         ↓
+    Services Layer
+    ├─ InventoryService
+    ├─ GeminiService
+    └─ ChatService
+         ↓
+    Database (SQLite + SQLAlchemy)
+         ↓
+    Google Gemini AI (1.5 Flash)
+```
+
+### Estrutura de Diretórios
+
+```
 pixaflow-chatbot/
 ├── backend/
 │   ├── app/
@@ -231,6 +248,28 @@ A arquitetura do chatbot foi projetada para evitar alucinações da IA e garanti
 - Respostas sempre baseadas em dados reais do estoque
 
 O banco de dados é populado automaticamente com produtos de exemplo na primeira execução.
+
+## Decisões Técnicas
+
+### Por que SQLite em vez de PostgreSQL?
+
+Priorizei simplicidade na execução. O SQLite elimina a necessidade de instalar e configurar um servidor de banco de dados, permitindo que qualquer pessoa clone o projeto e o execute rapidamente. Como utilizei SQLAlchemy, a troca para PostgreSQL seria simples em um cenário de produção.
+
+### Por que usar a IA apenas para interpretar e responder?
+
+A IA não é a fonte da verdade. Ela apenas interpreta a intenção do usuário e formata respostas baseadas em dados reais do banco de dados. Isso evita alucinações e garante que as informações do estoque sejam sempre precisas.
+
+### Por que FastAPI?
+
+FastAPI é moderno, rápido, com suporte nativo a validação de dados via Pydantic, documentação automática (Swagger/OpenAPI) e tipagem estática. Ideal para APIs RESTful.
+
+### Por que React + TypeScript?
+
+React é a biblioteca UI mais popular, com grande comunidade e ecossistema. TypeScript adiciona segurança de tipos, reduzindo bugs em tempo de desenvolvimento.
+
+### Por que Gemini 1.5 Flash?
+
+É o modelo mais recente e rápido da Google, com excelente custo-benefício e performance para tarefas de processamento de linguagem natural.
 
 ## Segurança
 
