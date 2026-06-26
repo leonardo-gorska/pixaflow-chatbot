@@ -79,6 +79,14 @@ Responda focando na quantidade disponível, em português brasileiro."""
         if intent == "greeting":
             return "Olá! Como posso ajudar você hoje? Pergunte sobre nossos produtos, preços ou quantidades em estoque."
         
+        # Handle farewell
+        if intent == "farewell":
+            return "Até logo! Volte sempre que precisar. Foi um prazer ajudar!"
+        
+        # Handle thanks
+        if intent == "thanks":
+            return "Por nada! Estou sempre aqui para ajudar. Precisa de mais alguma coisa?"
+        
         # Handle special case: check total products
         if intent == "check_total_products":
             try:

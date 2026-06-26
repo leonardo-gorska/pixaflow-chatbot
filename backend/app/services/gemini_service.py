@@ -80,6 +80,8 @@ Responda APENAS em formato JSON válido com as chaves "intent" e "product".
 
 Intenções possíveis:
 - "greeting": usuário está cumprimentando (olá, oi, bom dia, etc)
+- "farewell": usuário está se despedindo (tchau, adeus, até logo, etc)
+- "thanks": usuário está agradecendo (obrigado, valeu, thanks, etc)
 - "search_product": usuário está procurando um produto específico
 - "check_quantity": usuário quer saber a quantidade de um produto específico
 - "check_price": usuário quer saber o preço de um produto específico
@@ -90,6 +92,8 @@ Mensagem do usuário: "{message}"
 
 Exemplos de resposta:
 {{"intent": "greeting", "product": null}}
+{{"intent": "farewell", "product": null}}
+{{"intent": "thanks", "product": null}}
 {{"intent": "search_product", "product": "arroz"}}
 {{"intent": "check_quantity", "product": "café"}}
 {{"intent": "check_total_products", "product": null}}
