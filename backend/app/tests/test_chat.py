@@ -147,8 +147,8 @@ def test_chat_endpoint_returns_query(client):
 def test_chat_endpoint_help_order_query(client):
     answer = post_chat(client, "Como peço alguma coisa?")
 
-    assert "Tem arroz?" in answer
-    assert "O que vocês vendem?" in answer
+    assert "iFood" in answer
+    assert "PixaFlow Mercado" in answer
 
 
 def test_chat_endpoint_short_which_question_lists_products(client):

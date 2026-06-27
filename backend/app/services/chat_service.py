@@ -366,11 +366,11 @@ Sugira 2 ou 3 produtos disponíveis e ofereça listar o estoque completo."""
 
         if intent == "help_order":
             return (
-                "Você pode pedir de um jeito bem simples:\n\n"
-                "- Pergunte se temos um produto. Ex.: \"Tem arroz?\"\n"
-                "- Consulte preço ou estoque. Ex.: \"Quanto custa o café?\" ou \"Quantos cafés tem?\"\n"
-                "- Peça a lista de produtos. Ex.: \"O que vocês vendem?\"\n\n"
-                "Depois é só me dizer o produto que você procura."
+                "Para fazer um pedido, você tem algumas opções:\n\n"
+                "1. **Aqui pelo chat / WhatsApp:** Me diga quais produtos você quer separar.\n"
+                "   Ex: \"Tem arroz?\" ou \"Quero 2 cafés\".\n"
+                "2. **Pelo iFood ou nosso App:** Busque por 'PixaFlow Mercado' no seu app de entregas preferido.\n\n"
+                "O que você gostaria de pedir agora?"
             )
 
         if intent in {"check_total_products", "list_products"}:
