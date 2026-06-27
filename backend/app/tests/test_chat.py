@@ -1,5 +1,5 @@
-def post_chat(client, message: str) -> str:
-    response = client.post("/api/chat", json={"message": message})
+def post_chat(client, message: str, history: list[dict] | None = None) -> str:
+    response = client.post("/api/chat", json={"message": message, "history": history or []})
     assert response.status_code == 200
     data = response.json()
     assert "answer" in data
@@ -46,6 +46,34 @@ def test_chat_endpoint_price_query(client):
 
     assert "Feijão Carioca" in answer
     assert "R$ 8,90" in answer
+
+
+def test_chat_endpoint_price_followup_uses_previous_product(client):
+    history = [
+        {"role": "user", "content": "Tem café?"},
+        {"role": "assistant", "content": "Sim, temos Café Pilão Tradicional 500g."},
+    ]
+
+    answer = post_chat(client, "Quanto custa?", history=history)
+
+    assert "Café Pilão" in answer
+    assert "R$ 17,80" in answer
+
+
+def test_chat_endpoint_affirmative_followup_lists_products(client):
+    history = [
+        {"role": "user", "content": "Tem chocolate?"},
+        {
+            "role": "assistant",
+            "content": 'Não encontrei esse item. Se quiser, pergunte "Quais produtos vocês vendem?" para ver a lista completa.',
+        },
+    ]
+
+    answer = post_chat(client, "Sim", history=history)
+
+    assert "Temos" in answer
+    assert "produtos no estoque" in answer
+    assert "Arroz Camil" in answer
 
 
 def test_chat_endpoint_hours_query(client):

@@ -7,6 +7,7 @@ O projeto usa **FastAPI** no backend, **React + TypeScript** no frontend, **SQLi
 ## Funcionalidades
 
 - Chat simples para atendimento de mercado
+- Continuação de conversa com histórico curto, como perguntar "Quanto custa?" após "Tem café?"
 - Consulta de produtos por nome, com suporte a acentos e plurais simples
 - Respostas para preço, quantidade, disponibilidade e listagem de produtos
 - Respostas para horário, endereço, contato, entregas, formas de pagamento, trocas e promoções
@@ -256,7 +257,7 @@ Retorna o status da API, banco de dados e Gemini.
 O fluxo principal é:
 
 1. O usuário envia uma mensagem pelo frontend.
-2. A API recebe a mensagem no endpoint `/api/chat`.
+2. A API recebe a mensagem e um histórico curto da conversa no endpoint `/api/chat`.
 3. O `ChatService` identifica a intenção da pergunta.
 4. O `InventoryService` consulta os produtos no SQLite.
 5. O bot responde usando dados reais do banco.

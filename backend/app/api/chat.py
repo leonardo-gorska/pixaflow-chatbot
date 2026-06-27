@@ -16,5 +16,8 @@ router = APIRouter()
 )
 async def chat(request: ChatRequest, db: Session = Depends(get_db)):
     chat_service = ChatService(db)
-    answer = chat_service.process_message(request.message)
+    answer = chat_service.process_message(
+        request.message,
+        history=[message.model_dump() for message in request.history],
+    )
     return ChatResponse(answer=answer)

@@ -71,16 +71,26 @@ class InventoryService:
             return []
 
         query_tokens = set(query_normalized.split())
-        matches = []
+        scored_matches = []
 
         for product in self.db.query(Product).all():
+            product_name = self.normalize_query(product.name)
             product_text = self._product_search_text(product)
+            product_name_tokens = set(product_name.split())
             product_tokens = set(product_text.split())
 
-            if query_normalized in product_text or query_tokens & product_tokens:
-                matches.append(product)
+            if query_normalized in product_name or product_name in query_normalized:
+                score = 100
+            else:
+                name_overlap = len(query_tokens & product_name_tokens)
+                text_overlap = len(query_tokens & product_tokens)
+                score = (name_overlap * 10) + text_overlap
 
-        return matches
+            if score > 0:
+                scored_matches.append((score, product))
+
+        scored_matches.sort(key=lambda item: item[0], reverse=True)
+        return [product for _, product in scored_matches]
 
     def search_product(self, query: str) -> Optional[Product]:
         """

@@ -163,6 +163,85 @@ class ChatService:
             logger.error("Error extracting intent: %s", exc)
             return local_intent
 
+    def _product_mentioned_in_text(self, text: str):
+        normalized_text = self.inventory_service.normalize_query(text)
+        if not normalized_text:
+            return None
+
+        text_tokens = set(normalized_text.split())
+        best_product = None
+        best_score = 0
+
+        for product in self.inventory_service.get_all_products():
+            product_name = self.inventory_service.normalize_query(product.name)
+            product_tokens = {
+                token
+                for token in product_name.split()
+                if len(token) > 2 and not token.isdigit()
+            }
+
+            if product_name in normalized_text:
+                return product
+
+            score = len(product_tokens & text_tokens)
+            if score > best_score:
+                best_score = score
+                best_product = product
+
+        return best_product if best_score > 0 else None
+
+    def _last_product_from_history(self, history: Optional[list[dict]]) -> Optional[str]:
+        if not history:
+            return None
+
+        user_messages = [
+            item.get("content", "")
+            for item in history
+            if item.get("role") == "user"
+        ]
+        assistant_messages = [
+            item.get("content", "")
+            for item in history
+            if item.get("role") == "assistant"
+        ]
+
+        for content in reversed(user_messages + assistant_messages):
+            product = self._product_mentioned_in_text(content)
+            if product:
+                return product.name
+
+        return None
+
+    def _last_assistant_message(self, history: Optional[list[dict]]) -> str:
+        if not history:
+            return ""
+
+        for item in reversed(history):
+            if item.get("role") == "assistant":
+                return item.get("content", "")
+
+        return ""
+
+    def _apply_history_context(self, intent_data: dict, message: str, history: Optional[list[dict]]) -> dict:
+        normalized = self._normalized_message(message)
+        last_assistant = self._normalized_message(self._last_assistant_message(history))
+
+        affirmative = normalized in {"sim", "s", "claro", "pode", "quero", "quero sim", "por favor"}
+        assistant_offered_list = re.search(r"\b(lista completa|listar|listasse|estoque completo|produtos disponiveis)\b", last_assistant)
+        if affirmative and assistant_offered_list:
+            return {"intent": "list_products", "product": None, "category": None}
+
+        needs_context_product = (
+            intent_data.get("intent") in {"check_price", "check_quantity", "search_product", "list_matching_products"}
+            and not intent_data.get("product")
+        )
+        if needs_context_product:
+            last_product = self._last_product_from_history(history)
+            if last_product:
+                intent_data["product"] = last_product
+
+        return intent_data
+
     @staticmethod
     def _format_money(value: float) -> str:
         return f"R$ {float(value):.2f}".replace(".", ",")
@@ -263,8 +342,9 @@ Sugira 2 ou 3 produtos disponíveis e ofereça listar o estoque completo."""
         total_units = sum(product.quantity for product in products)
         return f"Temos {total_units} unidades no estoque, somando todos os produtos cadastrados."
 
-    def process_message(self, message: str) -> str:
+    def process_message(self, message: str, history: Optional[list[dict]] = None) -> str:
         intent_data = self._extract_intent_and_product(message)
+        intent_data = self._apply_history_context(intent_data, message, history)
         intent = intent_data.get("intent", "search_product")
         product_name = intent_data.get("product")
         category = intent_data.get("category")

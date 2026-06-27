@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import { chatAPI } from '../api';
+import { ChatHistoryMessage, chatAPI } from '../api';
 import './Chat.css';
 
 interface Message {
@@ -43,12 +43,19 @@ const Chat = () => {
     const messageText = input.trim();
     if (!messageText || isLoading) return;
 
+    const history: ChatHistoryMessage[] = messages
+      .slice(-8)
+      .map((message) => ({
+        role: message.isUser ? 'user' : 'assistant',
+        content: message.text,
+      }));
+
     setMessages((prev) => [...prev, createMessage(messageText, true)]);
     setInput('');
     setIsLoading(true);
 
     try {
-      const response = await chatAPI.sendMessage(messageText);
+      const response = await chatAPI.sendMessage(messageText, history);
       setMessages((prev) => [...prev, createMessage(response, false)]);
     } catch (error) {
       setMessages((prev) => [
