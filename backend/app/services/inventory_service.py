@@ -1,6 +1,7 @@
 from sqlalchemy.orm import Session
 from app.database.models import Product
 from typing import Optional, List
+from difflib import SequenceMatcher
 
 
 class InventoryService:
@@ -19,7 +20,22 @@ class InventoryService:
             Product.name.ilike(f"%{query_lower}%")
         ).first()
         
-        return product
+        if product:
+            return product
+        
+        # Try fuzzy matching if no exact match
+        all_products = self.db.query(Product).all()
+        best_match = None
+        best_ratio = 0.6  # Minimum similarity threshold
+        
+        for prod in all_products:
+            # Compare query with product name
+            ratio = SequenceMatcher(None, query_lower, prod.name.lower()).ratio()
+            if ratio > best_ratio:
+                best_ratio = ratio
+                best_match = prod
+        
+        return best_match
     
     def get_all_products(self) -> List[Product]:
         """

@@ -58,34 +58,56 @@ class ChatService:
         
         # Greeting patterns
         if re.match(r'^(ola|olá|oi|bom dia|boa tarde|boa night|eai|eae|hey|hi|hello)', message_lower.strip()):
-            return {"intent": "greeting", "product": None}
+            return {"intent": "greeting", "product": None, "category": None}
         
         # Farewell patterns
         if re.match(r'^(tchau|adeus|ate logo|bye|falou|xau|adeus)', message_lower.strip()):
-            return {"intent": "farewell", "product": None}
+            return {"intent": "farewell", "product": None, "category": None}
         
         # Thanks patterns
         if re.match(r'^(obrigado|obrigada|valeu|thanks|agradecido|agradecida)', message_lower.strip()):
-            return {"intent": "thanks", "product": None}
+            return {"intent": "thanks", "product": None, "category": None}
         
         # Total products patterns
         if re.search(r'(quais produtos|o que vendem|o que vocês vendem|lista de produtos|todos os produtos)', message_lower):
-            return {"intent": "check_total_products", "product": None}
+            return {"intent": "check_total_products", "product": None, "category": None}
+        
+        # Category patterns
+        category_match = re.search(r'(quais|quao|que)\s+(\w+)\s+(tem|existem|vende|vocês tem|vocês vendem)', message_lower)
+        if category_match:
+            category = category_match.group(2)
+            return {"intent": "check_category", "product": None, "category": category}
+        
+        # Hours patterns
+        if re.search(r'(horario|horário|abre|fecha|funciona|aberto|fechado)', message_lower):
+            return {"intent": "check_hours", "product": None, "category": None}
+        
+        # Location patterns
+        if re.search(r'(onde fica|localizacao|localização|endereco|endereço|fica onde)', message_lower):
+            return {"intent": "check_location", "product": None, "category": None}
+        
+        # Payment patterns
+        if re.search(r'(pagamento|pagar|aceita|formas|cartão|cartao|dinheiro|pix|debito|crédito|credito)', message_lower):
+            return {"intent": "check_payment", "product": None, "category": None}
+        
+        # Promotions patterns
+        if re.search(r'(promoção|promocao|desconto|oferta|promo|promoções)', message_lower):
+            return {"intent": "check_promotions", "product": None, "category": None}
         
         # Quantity patterns
         quantity_match = re.search(r'quantos?\s+(\w+)', message_lower)
         if quantity_match:
             product = quantity_match.group(1)
-            return {"intent": "check_quantity", "product": product}
+            return {"intent": "check_quantity", "product": product, "category": None}
         
         # Price patterns
-        price_match = re.search(r'(quanto custa|preço do|valor do)\s+(\w+)', message_lower)
+        price_match = re.search(r'(quanto custa|preço do|valor do|preco do)\s+(\w+)', message_lower)
         if price_match:
             product = price_match.group(2)
-            return {"intent": "check_price", "product": product}
+            return {"intent": "check_price", "product": product, "category": None}
         
         # Default: search for product
-        return {"intent": "search_product", "product": message_lower}
+        return {"intent": "search_product", "product": message_lower, "category": None}
     
     def _search_product(self, product_name: str):
         """
@@ -137,10 +159,11 @@ Responda focando na quantidade disponível, em português brasileiro."""
         intent_data = self._extract_intent_and_product(message)
         intent = intent_data.get("intent", "search_product")
         product_name = intent_data.get("product")
+        category = intent_data.get("category")
         
         # Handle greeting
         if intent == "greeting":
-            return "Olá! Como posso ajudar você hoje? Pergunte sobre nossos produtos, preços ou quantidades em estoque."
+            return "Olá! Como posso ajudar você hoje? Pergunte sobre nossos produtos, preços, quantidades em estoque, categorias, horário de funcionamento ou formas de pagamento."
         
         # Handle farewell
         if intent == "farewell":
@@ -159,6 +182,36 @@ Responda focando na quantidade disponível, em português brasileiro."""
             except Exception as e:
                 logger.error(f"Error getting total products: {e}")
                 return "Desculpe, não consegui verificar a quantidade total de produtos no momento."
+        
+        # Handle category check
+        if intent == "check_category" and category:
+            try:
+                products = self.inventory_service.get_all_products()
+                category_products = [p for p in products if p.category and category.lower() in p.category.lower()]
+                if category_products:
+                    product_list = ", ".join([p.name for p in category_products])
+                    return f"Na categoria {category}, temos: {product_list}."
+                else:
+                    return f"Não encontramos produtos na categoria {category}. Temos produtos em: Grãos, Laticínios, Bebidas, Massas, Açúcar, Óleos e Farinhas."
+            except Exception as e:
+                logger.error(f"Error getting category products: {e}")
+                return "Desculpe, não consegui verificar os produtos dessa categoria."
+        
+        # Handle hours
+        if intent == "check_hours":
+            return "Nosso horário de funcionamento é de segunda a sexta, das 8h às 20h, e aos sábados das 8h às 18h. Domingos fechamos."
+        
+        # Handle location
+        if intent == "check_location":
+            return "Estamos localizados na Rua do Mercado, 123 - Centro. Fácil acesso com estacionamento gratuito."
+        
+        # Handle payment
+        if intent == "check_payment":
+            return "Aceitamos dinheiro, cartões de crédito/débito (Visa, Mastercard, Elo), PIX e vale-alimentação."
+        
+        # Handle promotions
+        if intent == "check_promotions":
+            return "Temos promoções semanais! Esta semana: Arroz Camil 5kg com 15% de desconto e Leite Integral Itambé 1kg leve 3 pague 2. Confira no balcão!"
         
         # Search for product
         product = self._search_product(product_name)

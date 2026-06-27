@@ -76,7 +76,7 @@ Responda em português brasileiro, de forma breve e natural."""
         Returns a dict with 'intent' and 'product' keys.
         """
         prompt = f"""Analise a mensagem do usuário e extraia a intenção e o nome do produto.
-Responda APENAS em formato JSON válido com as chaves "intent" e "product".
+Responda APENAS em formato JSON válido com as chaves "intent", "product" e "category".
 
 Intenções possíveis:
 - "greeting": usuário está cumprimentando (olá, oi, ola, bom dia, boa tarde, boa noite, etc)
@@ -86,6 +86,11 @@ Intenções possíveis:
 - "check_quantity": usuário quer saber a quantidade de um produto específico
 - "check_price": usuário quer saber o preço de um produto específico
 - "check_total_products": usuário quer saber quantos produtos existem no estoque no total
+- "check_category": usuário quer saber quais produtos de uma categoria específica
+- "check_hours": usuário quer saber horário de funcionamento
+- "check_location": usuário quer saber localização
+- "check_payment": usuário quer saber formas de pagamento
+- "check_promotions": usuário quer saber sobre promoções/descontos
 - "general": pergunta geral sobre o produto
 
 Mensagem do usuário: "{message}"
@@ -94,16 +99,25 @@ REGRAS IMPORTANTES:
 1. Se a mensagem for apenas uma saudação como "ola", "oi", "olá", retorne intent "greeting" e product null
 2. Se a mensagem perguntar sobre quantidade de um produto específico como "quantos cafés", retorne intent "check_quantity" e product "café"
 3. Se a mensagem perguntar sobre total de produtos como "quantos produtos", retorne intent "check_total_products" e product null
+4. Se a mensagem perguntar sobre categoria como "quais laticínios", retorne intent "check_category", category "laticínios" e product null
+5. Se a mensagem perguntar sobre horário, retorne intent "check_hours" e product null
+6. Se a mensagem perguntar sobre localização, retorne intent "check_location" e product null
+7. Se a mensagem perguntar sobre formas de pagamento, retorne intent "check_payment" e product null
+8. Se a mensagem perguntar sobre promoções, retorne intent "check_promotions" e product null
 
 Exemplos de resposta:
-{{"intent": "greeting", "product": null}}
-{{"intent": "farewell", "product": null}}
-{{"intent": "thanks", "product": null}}
-{{"intent": "search_product", "product": "arroz"}}
-{{"intent": "check_quantity", "product": "café"}}
-{{"intent": "check_total_products", "product": null}}
+{{"intent": "greeting", "product": null, "category": null}}
+{{"intent": "farewell", "product": null, "category": null}}
+{{"intent": "thanks", "product": null, "category": null}}
+{{"intent": "search_product", "product": "arroz", "category": null}}
+{{"intent": "check_quantity", "product": "café", "category": null}}
+{{"intent": "check_category", "product": null, "category": "laticínios"}}
+{{"intent": "check_hours", "product": null, "category": null}}
+{{"intent": "check_location", "product": null, "category": null}}
+{{"intent": "check_payment", "product": null, "category": null}}
+{{"intent": "check_promotions", "product": null, "category": null}}
 
-Se não conseguir identificar um produto específico, retorne null para "product"."""
+Se não conseguir identificar um produto específico ou categoria, retorne null para os campos correspondentes."""
         
         try:
             response = self.model.generate_content(prompt)
