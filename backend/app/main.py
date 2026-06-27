@@ -1,3 +1,5 @@
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.api.chat import router as chat_router
@@ -10,10 +12,20 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Initialize database and seed it with sample data on startup."""
+    init_db()
+    seed_database()
+    yield
+
+
 app = FastAPI(
     title="PixaFlow ChatBot API",
     description="A simple market chatbot using FastAPI and Gemini AI",
-    version="1.0.0"
+    version="1.0.0",
+    lifespan=lifespan,
 )
 
 app.add_middleware(
@@ -26,15 +38,6 @@ app.add_middleware(
 
 app.include_router(chat_router, prefix="/api")
 app.include_router(products_router, prefix="/api")
-
-
-@app.on_event("startup")
-async def startup_event():
-    """
-    Initialize database and seed it with sample data on startup.
-    """
-    init_db()
-    seed_database()
 
 
 @app.get("/")

@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { ChatHistoryMessage, chatAPI } from '../api';
 import './Chat.css';
 
@@ -11,6 +11,7 @@ interface Message {
 const Chat = () => {
   const nextMessageId = useRef(1);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
   const [messages, setMessages] = useState<Message[]>([
     {
       id: 0,
@@ -30,6 +31,14 @@ const Chat = () => {
     nextMessageId.current += 1;
     return message;
   };
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages, isLoading]);
 
   const focusInput = () => {
     setTimeout(() => {
@@ -88,14 +97,18 @@ const Chat = () => {
             key={message.id}
             className={`message ${message.isUser ? 'user' : 'bot'}`}
           >
+            {!message.isUser && <span className="message-avatar">🛒</span>}
             <div className="message-content">{message.text}</div>
+            {message.isUser && <span className="message-avatar">👤</span>}
           </div>
         ))}
         {isLoading && (
           <div className="message bot">
+            <span className="message-avatar">🛒</span>
             <div className="message-content typing">Digitando...</div>
           </div>
         )}
+        <div ref={messagesEndRef} />
       </div>
 
       <form className="chat-input" onSubmit={handleSubmit}>
