@@ -138,6 +138,9 @@ class ChatService:
 
         product = self._clean_product_query(message)
 
+        if re.search(r"\b(quero|queria|vou querer|separa|separar|manda|mandar|me ve)\b", normalized):
+            return {"intent": "order_product", "product": product, "category": None}
+
         if re.search(r"\b(preco|valor|custa|custam)\b", normalized):
             return {"intent": "check_price", "product": product, "category": None}
 
@@ -421,6 +424,10 @@ Sugira 2 ou 3 produtos disponíveis e ofereça listar o estoque completo."""
         product = self.inventory_service.search_product(product_name or "")
 
         if product:
+            if intent == "order_product":
+                data = product.to_dict()
+                return f"Perfeito! Já deixei anotado o {data['name']} para você. O valor é {self._format_money(data['price'])}. Gostaria de adicionar mais alguma coisa ou prefere finalizar?"
+            
             return self._format_product_response(product, intent, message)
 
         return self._no_product_response(message)

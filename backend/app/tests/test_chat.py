@@ -34,6 +34,14 @@ def test_chat_endpoint_quantity_query_with_plural_and_accent(client):
     assert "Café Pilão" in answer
 
 
+def test_chat_endpoint_order_product(client):
+    answer = post_chat(client, "Quero 2 cafés")
+
+    assert "Perfeito" in answer
+    assert "anotado" in answer
+    assert "Café Pilão" in answer
+
+
 def test_chat_endpoint_list_matching_product(client):
     answer = post_chat(client, "Quais cafés tem?")
 

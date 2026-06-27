@@ -106,6 +106,7 @@ Intenções possíveis:
 - "check_location"
 - "check_payment"
 - "check_promotions"
+- "order_product"
 - "general"
 
 Mensagem do usuário: "{message}"
@@ -114,6 +115,7 @@ Regras:
 1. "olá", "ola", "oi", "bom dia", "boa tarde" e "boa noite" são greeting.
 2. Perguntas como "quantos cafés tem?" são check_quantity com product "café".
 3. Perguntas como "quais cafés tem?" ou "tem café?" são search_product com product "café".
+4. Frases como "quero café" ou "separa 2 cafés" são order_product com product "café".
 4. Perguntas como "o que vocês vendem?" ou "quais produtos tem?" são check_total_products.
 5. Horário de funcionamento é check_hours.
 6. Endereço ou localização é check_location.
