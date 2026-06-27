@@ -227,7 +227,10 @@ class ChatService:
         last_assistant = self._normalized_message(self._last_assistant_message(history))
 
         affirmative = normalized in {"sim", "s", "claro", "pode", "quero", "quero sim", "por favor"}
-        assistant_offered_list = re.search(r"\b(lista completa|listar|listasse|estoque completo|produtos disponiveis)\b", last_assistant)
+        assistant_offered_list = re.search(
+            r"\b(lista|listar|listasse|liste|mostrar|mostre|estoque completo|todo o estoque|produtos disponiveis|todos os produtos)\b",
+            last_assistant
+        )
         if affirmative and assistant_offered_list:
             return {"intent": "list_products", "product": None, "category": None}
 
