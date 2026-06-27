@@ -1,9 +1,11 @@
-import google.generativeai as genai
-from app.config import get_settings
-from typing import Optional
 import json
 import logging
 import re
+from typing import Optional
+
+import google.generativeai as genai
+
+from app.config import get_settings
 
 logger = logging.getLogger(__name__)
 
@@ -11,139 +13,138 @@ logger = logging.getLogger(__name__)
 class GeminiService:
     def __init__(self):
         settings = get_settings()
-        genai.configure(api_key=settings.gemini_api_key)
-        self.model = genai.GenerativeModel('gemini-1.5-flash')
-    
+        self.enabled = bool(settings.gemini_api_key)
+        self.model: Optional[genai.GenerativeModel] = None
+
+        if self.enabled:
+            genai.configure(api_key=settings.gemini_api_key)
+            self.model = genai.GenerativeModel(settings.gemini_model)
+
     def generate_response(self, prompt: str) -> str:
-        """
-        Generate a response using Gemini AI.
-        """
+        if not self.enabled or self.model is None:
+            raise RuntimeError("Gemini API key is not configured.")
+
         try:
             response = self.model.generate_content(prompt)
-            return response.text
-        except Exception as e:
-            logger.error(f"Error generating response: {e}")
-            raise  # Re-raise to allow fallback handling
-    
+            return response.text.strip()
+        except Exception as exc:
+            logger.error("Error generating Gemini response: %s", exc)
+            raise
+
     def format_product_response(self, product_data: dict, user_query: str) -> str:
-        """
-        Format product information into a natural response using Gemini.
-        """
         prompt = f"""Você é um atendente de mercado educado e prestativo.
-Sua função é responder perguntas sobre produtos usando APENAS os dados fornecidos abaixo.
-NUNCA invente informações ou produtos que não estão na lista.
-Se o produto não existir nos dados, informe educadamente que não o encontrou.
+Responda usando apenas os dados do produto abaixo.
+Não invente produtos, preços, quantidades ou promoções.
 
 Dados do produto:
 {product_data}
 
 Pergunta do usuário: {user_query}
 
-Responda de forma natural e amigável, em português brasileiro."""
-        
-        return self.generate_response(prompt)
-    
-    def format_no_product_response(self, user_query: str) -> str:
-        """
-        Generate a response when no product is found.
-        """
-        prompt = f"""Você é um atendente de mercado educado e prestativo.
-O usuário perguntou sobre: "{user_query}"
-Infelizmente, não encontramos esse produto no nosso estoque.
-Responda de forma educada e sugira que o usuário pergunte sobre outros produtos.
 Responda em português brasileiro, de forma breve e natural."""
-        
+
         return self.generate_response(prompt)
-    
+
+    def format_no_product_response(self, user_query: str) -> str:
+        prompt = f"""Você é um atendente de mercado educado.
+O usuário perguntou sobre: "{user_query}"
+Esse produto não foi encontrado no estoque.
+Responda em português brasileiro, de forma breve, e sugira perguntar por arroz, feijão, leite ou café."""
+
+        return self.generate_response(prompt)
+
     def _clean_product_name(self, text: str) -> str:
-        """
-        Clean product name by removing punctuation and common words.
-        """
-        # Remove punctuation
-        text = re.sub(r'[^\w\s]', '', text)
-        # Common words to remove
-        common_words = {'tem', 'temos', 'quanto', 'quanta', 'quantos', 'quantas', 
-                       'custa', 'custam', 'existe', 'existem', 'temos', 'o', 'a', 
-                       'os', 'as', 'um', 'uma', 'uns', 'umas', 'de', 'da', 'do', 
-                       'em', 'para', 'por', 'é', 'são', 'está', 'estão'}
-        words = text.lower().split()
-        filtered_words = [w for w in words if w not in common_words and len(w) > 2]
-        return ' '.join(filtered_words)
-    
+        text = re.sub(r"[^\w\s]", " ", text.lower())
+        common_words = {
+            "tem",
+            "temos",
+            "quanto",
+            "quanta",
+            "quantos",
+            "quantas",
+            "custa",
+            "custam",
+            "existe",
+            "existem",
+            "o",
+            "a",
+            "os",
+            "as",
+            "um",
+            "uma",
+            "uns",
+            "umas",
+            "de",
+            "da",
+            "do",
+            "em",
+            "para",
+            "por",
+            "é",
+            "são",
+            "está",
+            "estão",
+        }
+        words = text.split()
+        filtered_words = [word for word in words if word not in common_words and len(word) > 2]
+        return " ".join(filtered_words)
+
     def extract_intent_and_product(self, message: str) -> dict:
-        """
-        Extract the user's intent and product name from their message using Gemini.
-        Returns a dict with 'intent' and 'product' keys.
-        """
         prompt = f"""Analise a mensagem do usuário e extraia a intenção e o nome do produto.
-Responda APENAS em formato JSON válido com as chaves "intent", "product" e "category".
+Responda apenas em JSON válido com as chaves "intent", "product" e "category".
 
 Intenções possíveis:
-- "greeting": usuário está cumprimentando (olá, oi, ola, bom dia, boa tarde, boa noite, etc)
-- "farewell": usuário está se despedindo (tchau, adeus, até logo, bye, etc)
-- "thanks": usuário está agradecendo (obrigado, valeu, thanks, obrigada, etc)
-- "search_product": usuário está procurando um produto específico
-- "check_quantity": usuário quer saber a quantidade de um produto específico
-- "check_price": usuário quer saber o preço de um produto específico
-- "check_total_products": usuário quer saber quantos produtos existem no estoque no total
-- "check_category": usuário quer saber quais produtos de uma categoria específica
-- "check_hours": usuário quer saber horário de funcionamento
-- "check_location": usuário quer saber localização
-- "check_payment": usuário quer saber formas de pagamento
-- "check_promotions": usuário quer saber sobre promoções/descontos
-- "general": pergunta geral sobre o produto
+- "greeting"
+- "farewell"
+- "thanks"
+- "search_product"
+- "check_quantity"
+- "check_price"
+- "check_total_products"
+- "check_category"
+- "check_hours"
+- "check_location"
+- "check_payment"
+- "check_promotions"
+- "general"
 
 Mensagem do usuário: "{message}"
 
-REGRAS IMPORTANTES:
-1. Se a mensagem for apenas uma saudação como "ola", "oi", "olá", retorne intent "greeting" e product null
-2. Se a mensagem perguntar sobre quantidade de um produto específico como "quantos cafés", retorne intent "check_quantity" e product "café"
-3. Se a mensagem perguntar sobre total de produtos como "quantos produtos", retorne intent "check_total_products" e product null
-4. Se a mensagem perguntar sobre categoria como "quais laticínios", retorne intent "check_category", category "laticínios" e product null
-5. Se a mensagem perguntar sobre horário, retorne intent "check_hours" e product null
-6. Se a mensagem perguntar sobre localização, retorne intent "check_location" e product null
-7. Se a mensagem perguntar sobre formas de pagamento, retorne intent "check_payment" e product null
-8. Se a mensagem perguntar sobre promoções, retorne intent "check_promotions" e product null
+Regras:
+1. "olá", "ola", "oi", "bom dia", "boa tarde" e "boa noite" são greeting.
+2. Perguntas como "quantos cafés tem?" são check_quantity com product "café".
+3. Perguntas como "quais cafés tem?" ou "tem café?" são search_product com product "café".
+4. Perguntas como "o que vocês vendem?" ou "quais produtos tem?" são check_total_products.
+5. Horário de funcionamento é check_hours.
+6. Endereço ou localização é check_location.
+7. Formas de pagamento é check_payment.
+8. Promoções, ofertas ou descontos é check_promotions.
 
-Exemplos de resposta:
-{{"intent": "greeting", "product": null, "category": null}}
-{{"intent": "farewell", "product": null, "category": null}}
-{{"intent": "thanks", "product": null, "category": null}}
-{{"intent": "search_product", "product": "arroz", "category": null}}
-{{"intent": "check_quantity", "product": "café", "category": null}}
-{{"intent": "check_category", "product": null, "category": "laticínios"}}
-{{"intent": "check_hours", "product": null, "category": null}}
-{{"intent": "check_location", "product": null, "category": null}}
-{{"intent": "check_payment", "product": null, "category": null}}
-{{"intent": "check_promotions", "product": null, "category": null}}
+Exemplo:
+{{"intent": "check_quantity", "product": "café", "category": null}}"""
 
-Se não conseguir identificar um produto específico ou categoria, retorne null para os campos correspondentes."""
-        
         try:
-            response = self.model.generate_content(prompt)
-            # Extract JSON from response
-            response_text = response.text.strip()
-            # Remove markdown code blocks if present
+            response_text = self.generate_response(prompt)
             if response_text.startswith("```"):
                 response_text = response_text.replace("```json", "").replace("```", "").strip()
-            
-            result = json.loads(response_text)
-            return result
-        except Exception as e:
-            logger.error(f"Error extracting intent: {e}")
-            # Fallback: clean the message and use as product
-            cleaned_product = self._clean_product_name(message)
-            return {"intent": "search_product", "product": cleaned_product}
-    
+            return json.loads(response_text)
+        except Exception as exc:
+            logger.info("Gemini intent extraction unavailable, using local fallback: %s", exc)
+            return {
+                "intent": "search_product",
+                "product": self._clean_product_name(message),
+                "category": None,
+            }
+
     def format_response_with_fallback(self, product_data: dict, user_query: str) -> str:
-        """
-        Format product response with Gemini, using fallback if it fails.
-        """
         try:
             return self.format_product_response(product_data, user_query)
         except Exception:
-            # Fallback to simple template
             product_name = product_data.get("name", "Produto")
-            price = product_data.get("price", 0)
+            price = float(product_data.get("price", 0))
             quantity = product_data.get("quantity", 0)
-            return f"Sim! Temos {product_name}. Preço: R${price:.2f}. Quantidade: {quantity} unidades."
+            description = product_data.get("description", "")
+            return (
+                f"Sim! Temos {product_name}. {description}. "
+                f"Preço: R$ {price:.2f}. Quantidade: {quantity} unidades."
+            )

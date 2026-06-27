@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useRef, useState } from 'react';
 import { chatAPI } from '../api';
 import './Chat.css';
 
@@ -9,6 +9,8 @@ interface Message {
 }
 
 const Chat = () => {
+  const nextMessageId = useRef(1);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
   const [messages, setMessages] = useState<Message[]>([
     {
       id: 0,
@@ -18,55 +20,49 @@ const Chat = () => {
   ]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const inputRef = useRef<HTMLTextAreaElement>(null);
+
+  const createMessage = (text: string, isUser: boolean): Message => {
+    const message = {
+      id: nextMessageId.current,
+      text,
+      isUser,
+    };
+    nextMessageId.current += 1;
+    return message;
+  };
+
+  const focusInput = () => {
+    setTimeout(() => {
+      inputRef.current?.focus();
+    }, 100);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!input.trim() || isLoading) return;
 
-    const userMessage: Message = {
-      id: messages.length,
-      text: input,
-      isUser: true,
-    };
+    const messageText = input.trim();
+    if (!messageText || isLoading) return;
 
-    setMessages((prev) => [...prev, userMessage]);
+    setMessages((prev) => [...prev, createMessage(messageText, true)]);
     setInput('');
     setIsLoading(true);
 
     try {
-      const response = await chatAPI.sendMessage(input);
-      const botMessage: Message = {
-        id: messages.length + 1,
-        text: response,
-        isUser: false,
-      };
-      setMessages((prev) => [...prev, botMessage]);
+      const response = await chatAPI.sendMessage(messageText);
+      setMessages((prev) => [...prev, createMessage(response, false)]);
     } catch (error) {
-      const errorMessage: Message = {
-        id: messages.length + 1,
-        text: 'Desculpe, ocorreu um erro ao processar sua mensagem. Tente novamente.',
-        isUser: false,
-      };
-      setMessages((prev) => [...prev, errorMessage]);
+      setMessages((prev) => [
+        ...prev,
+        createMessage('Desculpe, ocorreu um erro ao processar sua mensagem. Tente novamente.', false),
+      ]);
     } finally {
       setIsLoading(false);
-      // Focus back on input after sending with small delay
-      setTimeout(() => {
-        if (inputRef.current) {
-          inputRef.current.focus();
-        }
-      }, 100);
+      focusInput();
     }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      if (e.altKey) {
-        // Alt+Enter: allow default behavior (new line)
-        return;
-      }
-      // Enter alone: submit
+    if (e.key === 'Enter' && !e.shiftKey && !e.altKey) {
       e.preventDefault();
       handleSubmit(e);
     }
@@ -75,10 +71,10 @@ const Chat = () => {
   return (
     <div className="chat-container">
       <div className="chat-header">
-        <h1>🛒 Mercado Virtual</h1>
+        <h1>Mercado Virtual</h1>
         <p>Assistente de Atendimento</p>
       </div>
-      
+
       <div className="chat-messages">
         {messages.map((message) => (
           <div
@@ -101,7 +97,7 @@ const Chat = () => {
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder="Digite sua mensagem... (Enter para enviar, Alt+Enter para nova linha)"
+          placeholder="Digite sua mensagem..."
           disabled={isLoading}
           rows={1}
         />

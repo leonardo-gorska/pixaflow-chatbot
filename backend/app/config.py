@@ -4,7 +4,8 @@ from pathlib import Path
 
 
 class Settings(BaseSettings):
-    gemini_api_key: str
+    gemini_api_key: str = ""
+    gemini_model: str = "gemini-2.5-flash-lite"
     database_url: str = "sqlite:///./inventory.db"
 
     class Config:

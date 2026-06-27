@@ -10,14 +10,12 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-# Initialize FastAPI app
 app = FastAPI(
     title="PixaFlow ChatBot API",
     description="A simple market chatbot using FastAPI and Gemini AI",
     version="1.0.0"
 )
 
-# Configure CORS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:5173", "http://localhost:3000"],
@@ -26,7 +24,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Include routers
 app.include_router(chat_router, prefix="/api")
 app.include_router(products_router, prefix="/api")
 
@@ -73,12 +70,11 @@ async def health_check():
     except Exception as e:
         logger.error(f"Database health check failed: {e}")
     
-    # Check Gemini API
     try:
         gemini_service = GeminiService()
-        # Simple test call
-        test_response = gemini_service.model.generate_content("Test")
-        health_status["gemini"] = True
+        if gemini_service.enabled:
+            gemini_service.generate_response("Responda apenas: ok")
+            health_status["gemini"] = True
     except Exception as e:
         logger.error(f"Gemini health check failed: {e}")
     

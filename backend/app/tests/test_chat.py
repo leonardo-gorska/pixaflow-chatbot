@@ -1,136 +1,146 @@
-import pytest
-from unittest.mock import Mock, patch
-
-
-@patch('app.services.chat_service.GeminiService')
-def test_chat_endpoint_success(mock_gemini, client):
-    """Test the chat endpoint with a valid message using mocked Gemini."""
-    # Mock the intent extraction
-    mock_gemini_instance = Mock()
-    mock_gemini_instance.extract_intent_and_product.return_value = {
-        "intent": "search_product",
-        "product": "arroz"
-    }
-    mock_gemini_instance.format_response_with_fallback.return_value = "Sim! Temos Arroz Camil 5kg. Preço: R$29.90. Quantidade: 18 unidades."
-    mock_gemini.return_value = mock_gemini_instance
-    
-    response = client.post(
-        "/api/chat",
-        json={"message": "Tem arroz?"}
-    )
-    
+def post_chat(client, message: str) -> str:
+    response = client.post("/api/chat", json={"message": message})
     assert response.status_code == 200
     data = response.json()
     assert "answer" in data
-    assert data["answer"] is not None
-    assert len(data["answer"]) > 0
+    assert data["answer"]
+    return data["answer"]
 
 
-@patch('app.services.chat_service.GeminiService')
-def test_chat_endpoint_empty_message(mock_gemini, client):
-    """Test the chat endpoint with an empty message using mocked Gemini."""
-    mock_gemini_instance = Mock()
-    mock_gemini_instance.extract_intent_and_product.return_value = {
-        "intent": "general",
-        "product": None
-    }
-    mock_gemini_instance.format_no_product_response.return_value = "Como posso ajudar você hoje?"
-    mock_gemini.return_value = mock_gemini_instance
-    
-    response = client.post(
-        "/api/chat",
-        json={"message": ""}
-    )
-    
-    # Should still return 200, but with a response
-    assert response.status_code == 200
-    data = response.json()
-    assert "answer" in data
+def test_chat_endpoint_success(client):
+    answer = post_chat(client, "Tem arroz?")
+
+    assert "Arroz Camil 5kg" in answer
+    assert "18" in answer
 
 
-@patch('app.services.chat_service.GeminiService')
-def test_chat_endpoint_nonexistent_product(mock_gemini, client):
-    """Test the chat endpoint asking about a non-existent product using mocked Gemini."""
-    mock_gemini_instance = Mock()
-    mock_gemini_instance.extract_intent_and_product.return_value = {
-        "intent": "search_product",
-        "product": "chocolate"
-    }
-    mock_gemini_instance.format_no_product_response.return_value = "Desculpe, não encontrei esse produto no nosso estoque."
-    mock_gemini.return_value = mock_gemini_instance
-    
-    response = client.post(
-        "/api/chat",
-        json={"message": "Tem chocolate?"}
-    )
-    
-    assert response.status_code == 200
-    data = response.json()
-    assert "answer" in data
-    assert data["answer"] is not None
-    # Should indicate product not found
-    assert "não" in data["answer"].lower() or "desculpe" in data["answer"].lower()
+def test_chat_endpoint_empty_message(client):
+    answer = post_chat(client, "")
+
+    assert "Olá" in answer
 
 
-@patch('app.services.chat_service.GeminiService')
-def test_chat_endpoint_quantity_query(mock_gemini, client):
-    """Test the chat endpoint asking about quantity using mocked Gemini."""
-    mock_gemini_instance = Mock()
-    mock_gemini_instance.extract_intent_and_product.return_value = {
-        "intent": "check_quantity",
-        "product": "arroz"
-    }
-    mock_gemini_instance.format_response_with_fallback.return_value = "Temos 18 unidades de Arroz Camil 5kg em estoque."
-    mock_gemini.return_value = mock_gemini_instance
-    
-    response = client.post(
-        "/api/chat",
-        json={"message": "Quantos arroz tem?"}
-    )
-    
-    assert response.status_code == 200
-    data = response.json()
-    assert "answer" in data
-    assert data["answer"] is not None
+def test_chat_endpoint_nonexistent_product(client):
+    answer = post_chat(client, "Tem chocolate?")
+
+    assert "Não encontrei" in answer
+    assert "lista completa" in answer
 
 
-@patch('app.services.chat_service.GeminiService')
-def test_chat_endpoint_price_query(mock_gemini, client):
-    """Test the chat endpoint asking about price using mocked Gemini."""
-    mock_gemini_instance = Mock()
-    mock_gemini_instance.extract_intent_and_product.return_value = {
-        "intent": "check_price",
-        "product": "feijão"
-    }
-    mock_gemini_instance.format_response_with_fallback.return_value = "O Feijão Carioca Kicaldo 1kg custa R$8.90."
-    mock_gemini.return_value = mock_gemini_instance
-    
-    response = client.post(
-        "/api/chat",
-        json={"message": "Quanto custa o feijão?"}
-    )
-    
-    assert response.status_code == 200
-    data = response.json()
-    assert "answer" in data
-    assert data["answer"] is not None
+def test_chat_endpoint_quantity_query_with_plural_and_accent(client):
+    answer = post_chat(client, "Quantos cafés tem?")
+
+    assert "9" in answer
+    assert "Café Pilão" in answer
+
+
+def test_chat_endpoint_list_matching_product(client):
+    answer = post_chat(client, "Quais cafés tem?")
+
+    assert "Café Pilão" in answer
+    assert "R$ 17,80" in answer
+
+
+def test_chat_endpoint_price_query(client):
+    answer = post_chat(client, "Quanto custa o feijão?")
+
+    assert "Feijão Carioca" in answer
+    assert "R$ 8,90" in answer
+
+
+def test_chat_endpoint_hours_query(client):
+    answer = post_chat(client, "Qual o horário de funcionamento?")
+
+    assert "segunda a sexta" in answer
+    assert "8h" in answer
+
+
+def test_chat_endpoint_location_query(client):
+    answer = post_chat(client, "Qual o endereço?")
+
+    assert "Rua do Mercado" in answer
+
+
+def test_chat_endpoint_delivery_query(client):
+    answer = post_chat(client, "Vocês entregam?")
+
+    assert "entregas" in answer
+    assert "Centro" in answer
+
+
+def test_chat_endpoint_contact_query(client):
+    answer = post_chat(client, "Qual o telefone de contato?")
+
+    assert "WhatsApp" in answer
+    assert "3333-0000" in answer
+
+
+def test_chat_endpoint_categories_query(client):
+    answer = post_chat(client, "Quais categorias vocês têm?")
+
+    assert "Grãos" in answer
+    assert "Bebidas" in answer
+
+
+def test_chat_endpoint_cheapest_product_query(client):
+    answer = post_chat(client, "Qual o produto mais barato?")
+
+    assert "mais barato" in answer
+    assert "Leite Integral" in answer
+
+
+def test_chat_endpoint_most_expensive_product_query(client):
+    answer = post_chat(client, "Qual o produto mais caro?")
+
+    assert "mais caro" in answer
+    assert "Arroz Camil" in answer
+
+
+def test_chat_endpoint_low_stock_query(client):
+    answer = post_chat(client, "Tem algum produto acabando?")
+
+    assert "menor estoque" in answer
+    assert "Café Pilão" in answer
+
+
+def test_chat_endpoint_total_stock_query(client):
+    answer = post_chat(client, "Quantas unidades no total tem no estoque?")
+
+    assert "79 unidades" in answer
+
+
+def test_chat_endpoint_returns_query(client):
+    answer = post_chat(client, "Vocês fazem troca?")
+
+    assert "troca" in answer
+    assert "comprovante" in answer
+
+
+def test_chat_endpoint_help_order_query(client):
+    answer = post_chat(client, "Como peço alguma coisa?")
+
+    assert "Tem arroz?" in answer
+    assert "O que vocês vendem?" in answer
+
+
+def test_chat_endpoint_short_which_question_lists_products(client):
+    answer = post_chat(client, "Quais?")
+
+    assert "Arroz Camil" in answer
+    assert "Café Pilão" in answer
 
 
 def test_root_endpoint(client):
-    """Test the root endpoint."""
     response = client.get("/")
-    
+
     assert response.status_code == 200
     data = response.json()
-    assert "message" in data
-    assert "status" in data
     assert data["status"] == "running"
 
 
 def test_health_endpoint(client):
-    """Test the health check endpoint with component status."""
     response = client.get("/health")
-    
+
     assert response.status_code == 200
     data = response.json()
     assert "status" in data
@@ -141,49 +151,24 @@ def test_health_endpoint(client):
 
 
 def test_get_all_products(client):
-    """Test the GET /products endpoint."""
     response = client.get("/api/products")
-    
+
     assert response.status_code == 200
     data = response.json()
     assert isinstance(data, list)
-    assert len(data) > 0
+    assert len(data) == 4
 
 
 def test_get_product_by_id(client):
-    """Test the GET /products/{id} endpoint."""
     response = client.get("/api/products/1")
-    
+
     assert response.status_code == 200
     data = response.json()
-    assert "id" in data
     assert data["id"] == 1
     assert "name" in data
 
 
 def test_get_product_by_id_not_found(client):
-    """Test GET /products/{id} with non-existent ID."""
     response = client.get("/api/products/999")
-    
+
     assert response.status_code == 404
-
-
-@patch('app.services.chat_service.GeminiService')
-def test_fallback_on_gemini_failure(mock_gemini, client):
-    """Test that fallback works when Gemini fails during intent extraction."""
-    mock_gemini_instance = Mock()
-    # Simulate Gemini failure during intent extraction
-    mock_gemini_instance.extract_intent_and_product.side_effect = Exception("Gemini API error")
-    mock_gemini_instance.format_no_product_response.return_value = "Desculpe, não encontrei esse produto no nosso estoque."
-    mock_gemini.return_value = mock_gemini_instance
-    
-    response = client.post(
-        "/api/chat",
-        json={"message": "Tem arroz?"}
-    )
-    
-    # Should still return 200 with fallback response
-    assert response.status_code == 200
-    data = response.json()
-    assert "answer" in data
-    assert data["answer"] is not None

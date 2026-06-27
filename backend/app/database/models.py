@@ -1,3 +1,5 @@
+from decimal import Decimal
+
 from sqlalchemy import Column, Integer, String, Numeric
 from sqlalchemy.orm import declarative_base
 
@@ -15,11 +17,15 @@ class Product(Base):
     category = Column(String, nullable=True)
 
     def to_dict(self):
+        price = self.price
+        if isinstance(price, Decimal):
+            price = float(price)
+
         return {
             "id": self.id,
             "name": self.name,
             "description": self.description,
-            "price": self.price,
+            "price": price,
             "quantity": self.quantity,
             "category": self.category
         }

@@ -1,52 +1,117 @@
-from sqlalchemy.orm import Session
-from app.database.models import Product
-from typing import Optional, List
 from difflib import SequenceMatcher
+from typing import List, Optional
+import re
+import unicodedata
+
+from sqlalchemy.orm import Session
+
+from app.database.models import Product
 
 
 class InventoryService:
     def __init__(self, db: Session):
         self.db = db
-    
+
+    @staticmethod
+    def normalize_text(text: str) -> str:
+        text = text or ""
+        text = unicodedata.normalize("NFD", text.lower())
+        text = "".join(char for char in text if unicodedata.category(char) != "Mn")
+        text = re.sub(r"[^a-z0-9\s]", " ", text)
+        text = re.sub(r"\s+", " ", text).strip()
+        return text
+
+    @classmethod
+    def singularize_token(cls, token: str) -> str:
+        irregular = {
+            "cafes": "cafe",
+            "feijoes": "feijao",
+            "graos": "grao",
+            "paes": "pao",
+        }
+        if token in irregular:
+            return irregular[token]
+        if token.endswith("oes") and len(token) > 4:
+            return token[:-3] + "ao"
+        if token.endswith("is") and len(token) > 3:
+            return token[:-2] + "il"
+        if token.endswith("es") and len(token) > 4:
+            return token[:-2]
+        if token.endswith("s") and len(token) > 3:
+            return token[:-1]
+        return token
+
+    @classmethod
+    def normalize_query(cls, query: str) -> str:
+        normalized = cls.normalize_text(query)
+        tokens = [cls.singularize_token(token) for token in normalized.split()]
+        return " ".join(tokens)
+
+    def _product_search_text(self, product: Product) -> str:
+        return self.normalize_query(
+            " ".join(
+                filter(
+                    None,
+                    [
+                        product.name,
+                        product.description,
+                        product.category,
+                    ],
+                )
+            )
+        )
+
+    def search_products(self, query: str) -> List[Product]:
+        """
+        Search products by normalized name, description or category.
+        Handles accents, case and simple Portuguese plurals.
+        """
+        query_normalized = self.normalize_query(query)
+        if not query_normalized:
+            return []
+
+        query_tokens = set(query_normalized.split())
+        matches = []
+
+        for product in self.db.query(Product).all():
+            product_text = self._product_search_text(product)
+            product_tokens = set(product_text.split())
+
+            if query_normalized in product_text or query_tokens & product_tokens:
+                matches.append(product)
+
+        return matches
+
     def search_product(self, query: str) -> Optional[Product]:
         """
-        Search for a product by name (case-insensitive partial match).
-        Returns the first matching product or None.
+        Search for the best product match by name, description or category.
         """
-        query_lower = query.lower()
-        
-        # Try exact match first
-        product = self.db.query(Product).filter(
-            Product.name.ilike(f"%{query_lower}%")
-        ).first()
-        
-        if product:
-            return product
-        
-        # Try fuzzy matching if no exact match
-        all_products = self.db.query(Product).all()
+        products = self.search_products(query)
+        if products:
+            return products[0]
+
+        query_normalized = self.normalize_query(query)
+        if not query_normalized:
+            return None
+
         best_match = None
-        best_ratio = 0.6  # Minimum similarity threshold
-        
-        for prod in all_products:
-            # Compare query with product name
-            ratio = SequenceMatcher(None, query_lower, prod.name.lower()).ratio()
+        best_ratio = 0.62
+
+        for product in self.db.query(Product).all():
+            product_name = self.normalize_query(product.name)
+            ratio = SequenceMatcher(None, query_normalized, product_name).ratio()
             if ratio > best_ratio:
                 best_ratio = ratio
-                best_match = prod
-        
+                best_match = product
+
         return best_match
-    
+
     def get_all_products(self) -> List[Product]:
-        """
-        Get all products in the inventory.
-        """
         return self.db.query(Product).all()
-    
+
     def get_product_by_name(self, name: str) -> Optional[Product]:
-        """
-        Get a product by exact name match.
-        """
-        return self.db.query(Product).filter(
-            Product.name.ilike(name)
-        ).first()
+        normalized_name = self.normalize_query(name)
+        for product in self.db.query(Product).all():
+            if self.normalize_query(product.name) == normalized_name:
+                return product
+        return None
