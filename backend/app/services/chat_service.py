@@ -3,6 +3,7 @@ from app.services.inventory_service import InventoryService
 from app.services.gemini_service import GeminiService
 from typing import Optional
 import logging
+import re
 
 logger = logging.getLogger(__name__)
 
@@ -19,10 +20,72 @@ class ChatService:
         """
         try:
             intent_data = self.gemini_service.extract_intent_and_product(message)
+            # Fallback: if Gemini fails to recognize common patterns, use regex
+            if self._is_gemini_failing(intent_data, message):
+                return self._extract_intent_fallback(message)
             return intent_data
         except Exception as e:
             logger.error(f"Error extracting intent: {e}")
-            return {"intent": "search_product", "product": message.lower()}
+            return self._extract_intent_fallback(message)
+    
+    def _is_gemini_failing(self, intent_data: dict, message: str) -> bool:
+        """
+        Check if Gemini is failing to recognize common patterns.
+        """
+        intent = intent_data.get("intent", "search_product")
+        product = intent_data.get("product")
+        message_lower = message.lower()
+        
+        # If Gemini says it's a product search but the message is clearly a greeting
+        if intent == "search_product" and product:
+            greeting_patterns = ["ola", "olá", "oi", "bom dia", "boa tarde", "boa noite"]
+            if any(greeting in message_lower for greeting in greeting_patterns):
+                return True
+        
+        # If Gemini says it's a product search but the message asks about total products
+        if intent == "search_product" and product:
+            total_patterns = ["quais produtos", "o que vendem", "o que vocês vendem", "lista de produtos"]
+            if any(pattern in message_lower for pattern in total_patterns):
+                return True
+        
+        return False
+    
+    def _extract_intent_fallback(self, message: str) -> dict:
+        """
+        Fallback intent extraction using regex patterns.
+        """
+        message_lower = message.lower()
+        
+        # Greeting patterns
+        if re.match(r'^(ola|olá|oi|bom dia|boa tarde|boa night|eai|eae|hey|hi|hello)', message_lower.strip()):
+            return {"intent": "greeting", "product": None}
+        
+        # Farewell patterns
+        if re.match(r'^(tchau|adeus|ate logo|bye|falou|xau|adeus)', message_lower.strip()):
+            return {"intent": "farewell", "product": None}
+        
+        # Thanks patterns
+        if re.match(r'^(obrigado|obrigada|valeu|thanks|agradecido|agradecida)', message_lower.strip()):
+            return {"intent": "thanks", "product": None}
+        
+        # Total products patterns
+        if re.search(r'(quais produtos|o que vendem|o que vocês vendem|lista de produtos|todos os produtos)', message_lower):
+            return {"intent": "check_total_products", "product": None}
+        
+        # Quantity patterns
+        quantity_match = re.search(r'quantos?\s+(\w+)', message_lower)
+        if quantity_match:
+            product = quantity_match.group(1)
+            return {"intent": "check_quantity", "product": product}
+        
+        # Price patterns
+        price_match = re.search(r'(quanto custa|preço do|valor do)\s+(\w+)', message_lower)
+        if price_match:
+            product = price_match.group(2)
+            return {"intent": "check_price", "product": product}
+        
+        # Default: search for product
+        return {"intent": "search_product", "product": message_lower}
     
     def _search_product(self, product_name: str):
         """

@@ -60,8 +60,13 @@ const Chat = () => {
     }
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.altKey) {
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      if (e.altKey) {
+        // Alt+Enter: allow default behavior (new line)
+        return;
+      }
+      // Enter alone: submit
       e.preventDefault();
       handleSubmit(e);
     }
